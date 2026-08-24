@@ -16,10 +16,12 @@ const (
 )
 
 type Config struct {
-	Index     string          `toml:"index"`
-	Embedding EmbeddingConfig `toml:"embedding"`
-	Harnesses map[string]bool `toml:"harnesses"`
-	Sources   SourcesConfig   `toml:"sources"`
+	Index           string          `toml:"index"`
+	MemoryDirectory string          `toml:"memory_directory"`
+	MemoryIndex     string          `toml:"memory_index"`
+	Embedding       EmbeddingConfig `toml:"embedding"`
+	Harnesses       map[string]bool `toml:"harnesses"`
+	Sources         SourcesConfig   `toml:"sources"`
 }
 
 type EmbeddingConfig struct {
@@ -47,7 +49,9 @@ func Default() (Config, error) {
 	}
 
 	return Config{
-		Index: filepath.Join(dataHome, "agent-sessions", "index.sqlite"),
+		Index:           filepath.Join(dataHome, "agent-sessions", "index.sqlite"),
+		MemoryDirectory: filepath.Join(dataHome, "recall", "memories"),
+		MemoryIndex:     filepath.Join(dataHome, "recall", "memory-index.sqlite"),
 		Embedding: EmbeddingConfig{
 			URL:       DefaultEmbeddingURL,
 			Model:     DefaultEmbeddingModel,
@@ -72,8 +76,19 @@ func Load() (Config, string, error) {
 	if err != nil {
 		return Config{}, "", err
 	}
+	return loadWithConfigPath(cfg, func() (string, error) { return configPathAgent() })
+}
 
-	path, err := configPath()
+func LoadRecall() (Config, string, error) {
+	cfg, err := Default()
+	if err != nil {
+		return Config{}, "", err
+	}
+	return loadWithConfigPath(cfg, recallConfigPath)
+}
+
+func loadWithConfigPath(cfg Config, pathResolver func() (string, error)) (Config, string, error) {
+	path, err := pathResolver()
 	if err != nil {
 		return Config{}, "", err
 	}
@@ -95,10 +110,16 @@ func Load() (Config, string, error) {
 	if cfg.Harnesses == nil {
 		cfg.Harnesses = map[string]bool{}
 	}
+	if cfg.MemoryDirectory == "" {
+		cfg.MemoryDirectory = DefaultMemoryDirectory()
+	}
+	if cfg.MemoryIndex == "" {
+		cfg.MemoryIndex = DefaultMemoryIndex()
+	}
 	return cfg, path, nil
 }
 
-func configPath() (string, error) {
+func configPathAgent() (string, error) {
 	if explicit := os.Getenv("AGENT_SESSIONS_CONFIG"); explicit != "" {
 		return expandHome(explicit)
 	}
@@ -113,10 +134,47 @@ func configPath() (string, error) {
 	return filepath.Join(configHome, "agent-sessions", "config.toml"), nil
 }
 
+func recallConfigPath() (string, error) {
+	if explicit := os.Getenv("RECALL_CONFIG"); explicit != "" {
+		return expandHome(explicit)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve home directory: %w", err)
+	}
+	configHome := os.Getenv("XDG_CONFIG_HOME")
+	if configHome == "" {
+		configHome = filepath.Join(home, ".config")
+	}
+	recall := filepath.Join(configHome, "recall", "config.toml")
+	if _, err := os.Stat(recall); err == nil {
+		return recall, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return recall, nil
+	}
+	if explicit := os.Getenv("AGENT_SESSIONS_CONFIG"); explicit != "" {
+		return expandHome(explicit)
+	}
+	legacy := filepath.Join(configHome, "agent-sessions", "config.toml")
+	if _, err := os.Stat(legacy); err == nil {
+		return legacy, nil
+	}
+	return recall, nil
+}
+
 func ExpandPaths(cfg *Config) error {
 	var err error
 	if cfg.Index, err = expandHome(cfg.Index); err != nil {
 		return err
+	}
+	if cfg.MemoryDirectory != "" {
+		cfg.MemoryDirectory, err = expandHome(cfg.MemoryDirectory)
+		if err != nil {
+			return fmt.Errorf("expand memory directory: %w", err)
+		}
+	}
+	if cfg.MemoryIndex, err = expandHome(cfg.MemoryIndex); err != nil {
+		return fmt.Errorf("expand memory index: %w", err)
 	}
 	for name, value := range map[string]*string{
 		"pi": &cfg.Sources.Pi, "codex": &cfg.Sources.Codex,
@@ -130,7 +188,37 @@ func ExpandPaths(cfg *Config) error {
 			return fmt.Errorf("expand %s source: %w", name, err)
 		}
 	}
+	if cfg.MemoryDirectory == "" {
+		cfg.MemoryDirectory = DefaultMemoryDirectory()
+	}
+	if cfg.MemoryIndex == "" {
+		cfg.MemoryIndex = DefaultMemoryIndex()
+	}
 	return nil
+}
+
+func DefaultMemoryDirectory() string {
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		dataHome = filepath.Join(home, ".local", "share")
+	}
+	return filepath.Join(dataHome, "recall", "memories")
+}
+
+func DefaultMemoryIndex() string {
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		dataHome = filepath.Join(home, ".local", "share")
+	}
+	return filepath.Join(dataHome, "recall", "memory-index.sqlite")
 }
 
 func expandHome(path string) (string, error) {

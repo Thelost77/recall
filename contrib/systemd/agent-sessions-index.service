@@ -1,6 +1,6 @@
 [Unit]
-Description=Index local coding-agent sessions
+Description=Index local coding-agent sessions and recall memories
 
 [Service]
 Type=oneshot
-ExecStart=%h/.local/bin/agent-sessions index --quiet
+ExecStart=%h/.local/bin/recall index --quiet
