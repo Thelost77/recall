@@ -320,6 +320,21 @@ make build
 
 Tests use temporary directories and fake embedders. They do not inspect real sessions or require Ollama.
 
+
+## Releases
+
+Recall uses SemVer tags with a leading `v`. Write notes in `docs/releases/vX.Y.Z.md`, commit them to `main`, then run:
+
+```sh
+./scripts/release.sh v0.2.1
+```
+
+The script checks the worktree, creates an annotated tag, and pushes it. GitHub Actions runs GoReleaser, which attaches multi-platform archives and checksums to the GitHub Release. Dry-run locally with:
+
+```sh
+goreleaser release --snapshot --clean --skip=publish
+```
+
 ## License
 
 [MIT](LICENSE)

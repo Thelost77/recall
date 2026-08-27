@@ -25,16 +25,6 @@ if [[ -n "$(git status --porcelain)" ]]; then
 	exit 1
 fi
 
-if ! command -v gh >/dev/null 2>&1; then
-	echo "gh is required to publish a GitHub release" >&2
-	exit 1
-fi
-
-if ! gh auth status >/dev/null 2>&1; then
-	echo "gh is not authenticated" >&2
-	exit 1
-fi
-
 if git rev-parse "$version" >/dev/null 2>&1; then
 	echo "tag $version already exists" >&2
 	exit 1
@@ -42,4 +32,5 @@ fi
 
 git tag -a "$version" -m "$version"
 git push origin HEAD --follow-tags
-gh release create "$version" --title "recall ${version}" --notes-file "$notes_file"
+
+echo "tagged ${version}; GitHub Actions Release workflow will publish binaries"
