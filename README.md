@@ -1,171 +1,219 @@
-# agent-sessions
+# recall
 
-`agent-sessions` searches local coding-agent sessions from one command.
+`recall` searches local coding-agent sessions and explicit, durable memories from one command. It supports session data from [Pi](https://github.com/badlogic/pi-mono), [Codex](https://github.com/openai/codex), [OpenCode](https://github.com/anomalyco/opencode), and [Claude Code](https://github.com/anthropics/claude-code).
 
-It supports [Pi](https://github.com/badlogic/pi-mono), [Codex](https://github.com/openai/codex), [OpenCode](https://github.com/anomalyco/opencode), and [Claude Code](https://github.com/anthropics/claude-code).
+Memory persistence is always manual. `recall` does not extract memories, summarize sessions, inject prompts, or write memory unless a user runs `remember`, `edit`, `forget`, or `restore`.
 
 ## Features
 
-- Search all supported harnesses through one local index.
-- Find exact terms and phrases with SQLite FTS5 and BM25.
-- Find misspelled terms with character n-grams.
-- Find related text with local Ollama embeddings.
-- Combine search channels into one result per session.
-- Reject semantic matches below a configurable relevance threshold.
-- Filter by harness, project path, role, and date.
-- Print native session IDs and resume commands.
-- Produce JSON output for scripts and other tools.
-- Update only new or changed sessions during indexing.
-- Keep session text on the local machine.
+- Search sessions and memories together while keeping their results and scores separate.
+- Search exact IDs, SQLite FTS5 text, character n-grams, and local Ollama embeddings.
+- Keep durable memories as versioned JSON files.
+- Rebuild the disposable local memory search index from canonical JSON.
+- Scope memories to a normalized Git remote or make them global.
+- Detect Syncthing conflict copies without changing them.
+- Preserve the existing `agent-sessions` command and output.
+- Keep all data and embedding requests on the local machine.
+
+Lexical and fuzzy search work without Ollama. Failed embeddings remain pending for a later indexing run.
 
 ## Requirements
 
 - Go 1.25 or later
-- [Ollama](https://ollama.com/) for semantic search
-- The `all-minilm` Ollama model for the default configuration
+- Git for project-scoped memory and project-default searches
+- [Ollama](https://ollama.com/) for optional semantic search
+- The `all-minilm` model for the default embedding configuration
 
-Install the default embedding model:
+Install the default model:
 
 ```sh
 ollama pull all-minilm
 ```
 
-Lexical and fuzzy search work without Ollama. A later indexing run adds missing embeddings.
-
 ## Installation
 
-Install the latest release with Go:
-
-```sh
-go install github.com/Thelost77/agent-sessions/cmd/agent-sessions@latest
-```
-
-Or build and install from source:
+Build and install both commands:
 
 ```sh
 git clone https://github.com/Thelost77/agent-sessions.git
 cd agent-sessions
-make test
+make check
 make install
 ```
 
-`make install` installs to `~/.local/bin` by default. Set `PREFIX` or `INSTALL_DIR` to use another path.
+`make install` installs `recall` and `agent-sessions` to `~/.local/bin` by default. Set `PREFIX` or `INSTALL_DIR` to use another path.
 
-## Usage
-
-Build or update the index:
+To install with Go:
 
 ```sh
-agent-sessions index
+go install github.com/Thelost77/agent-sessions/cmd/recall@latest
+go install github.com/Thelost77/agent-sessions/cmd/agent-sessions@latest
 ```
 
-Search all indexed sessions:
+## Search
+
+Index sessions and refresh memories:
 
 ```sh
-agent-sessions search "generate QR codes without assets"
+recall index
 ```
 
-Restrict the search to one project tree:
+Search both sources. Each source receives its own result limit and ranking pass:
 
 ```sh
-agent-sessions search \
-  --path ~/projects/qr-codes \
-  "generate QR codes without assets"
+recall "database migration decision"
 ```
 
-Apply more filters:
+Search sessions only. The short and long forms are equivalent:
 
 ```sh
-agent-sessions search \
-  --harness pi,codex,opencode \
-  --role user,assistant \
-  --since 2026-07-01 \
-  --before 2026-08-01 \
-  --limit 20 \
-  "empty state"
+recall -s "database migration decision"
+recall session "database migration decision"
 ```
 
-Show each channel rank and the semantic similarity:
+Search memories only:
 
 ```sh
-agent-sessions search --explain "genrate qr cdoes emtpy state"
+recall -m "database migration decision"
+recall memory "database migration decision"
 ```
 
-Use a stricter semantic threshold:
+Use `--` when a bare query starts with a command word:
 
 ```sh
-agent-sessions search --semantic-threshold 0.70 "audiobook playback failure"
+recall -- memory
 ```
 
-Disable semantic search:
-
-```sh
-agent-sessions search --lexical-only "empty state"
-```
-
-Produce JSON output:
-
-```sh
-agent-sessions search --json "empty state"
-```
-
-Inspect the index and its dependencies:
-
-```sh
-agent-sessions status
-agent-sessions doctor
-```
-
-Put all flags before the query. The CLI uses Go standard flag syntax.
-
-## Commands
-
-### `index`
-
-`index` supports these main options:
+Search output uses separate sections:
 
 ```text
---rebuild             Recreate the complete index
---reembed             Clear and regenerate all embeddings
---harness             Index selected harnesses
---quiet               Hide progress output
---index                Set the index path
---embedding-url        Set the Ollama URL
---embedding-model      Set the embedding model
+MEMORIES
+
+1. m_ab12cd [project]
+   We avoided SQLite triggers because...
+
+SESSIONS
+
+1. [pi] Database investigation
+   2026-08-03
+   ...
 ```
 
-The indexer preserves embeddings when stable chunk hashes do not change. It reads the OpenCode database in read-only mode.
+Combined JSON also keeps sources separate:
 
-The JSONL adapters skip each malformed line and continue parsing the remaining session. `doctor` reports all saved parser warnings.
+```json
+{
+  "query": "query",
+  "memories": { "results": [] },
+  "sessions": { "results": [] },
+  "warnings": []
+}
+```
 
-### `search`
+Common search options are:
 
-Each result contains:
+```text
+--limit
+--json
+--explain
+--lexical-only
+--semantic-threshold
+--all-projects
+```
 
-- the harness and session ID;
-- the session title and directory;
-- the best matching entry and excerpt;
-- a shell-quoted native resume command;
-- optional channel ranks with `--explain`.
+Session filters are:
 
-The command prints resume commands but does not run them.
+```text
+--path
+--harness
+--role
+--since
+--before
+```
 
-The default result limit is three. `--limit` sets a maximum and does not force the search to fill that count.
+Memory search supports `--project PATH`, `--global`, and `--include-archived`. Options that do not apply to the selected source are rejected. Put flags before the query; the CLI uses Go standard flag syntax.
 
-### `status`
+Inside a Git repository, new `recall` session searches default to that repository path. Memory searches include the current project and global memories. Outside Git, memory searches include global memories by default. Use `--all-projects` to search every project.
 
-`status` reports source, session, chunk, embedding, pending-vector, and parser-warning counts.
+## Explicit memory commands
 
-### `doctor`
+Create a project memory in the current Git repository:
 
-`doctor` checks source discovery, OpenCode compatibility, index access, Ollama access, and embedding dimensions.
+```sh
+recall remember "We keep migrations reversible until the next release."
+```
+
+Select another project, create a global memory, or include a source reference:
+
+```sh
+recall remember --project ~/work/api --source issue:481 "The API uses cursor pagination."
+recall remember --global "Use UTC in operational runbooks."
+```
+
+Memory content can come from arguments or standard input:
+
+```sh
+printf '%s\n' "The release job requires an annotated tag." | recall remember --global
+```
+
+Inspect and revise memories:
+
+```sh
+recall list
+recall list --all-projects --include-archived
+recall show m_ab12cd
+recall edit m_ab12cd "Updated content"
+recall history m_ab12cd
+recall forget m_ab12cd
+recall restore m_ab12cd
+```
+
+`edit` appends a revision and preserves prior content. `forget` archives without deleting. `restore` removes the archived state. List and search omit archived memories unless `--include-archived` is set. A unique memory ID prefix is accepted; an ambiguous prefix is rejected.
+
+Project identity comes from Git. Common SSH and HTTPS origin forms normalize to the same key, such as `github.com/owner/repository`. A project without an origin uses a `local/<repository-name>` key rather than an absolute path. Outside Git, use `--global` or select a Git repository with `--project`.
+
+## Storage and Syncthing
+
+Canonical memory records and local search data have different lifecycles:
+
+```text
+Canonical records:          ~/.local/share/recall/memories/records/*.json
+Disposable memory index:    ~/.local/share/recall/memory-index.sqlite
+Existing session index:     ~/.local/share/agent-sessions/index.sqlite
+```
+
+Each canonical JSON file contains its schema version, opaque `m_` ID, scope, project identity, timestamps, archive state, and complete revision history. Writes use a temporary file, file sync, and atomic rename. Embeddings and search data never enter canonical JSON.
+
+The SQLite memory index is derived data. Delete it to rebuild search from JSON:
+
+```sh
+rm -f ~/.local/share/recall/memory-index.sqlite{,-wal,-shm}
+recall index
+```
+
+Index rebuilds never delete canonical records. `recall index --rebuild` rebuilds both derived indexes. `agent-sessions index --rebuild` continues to rebuild only the session index.
+
+A Syncthing directory can hold canonical records:
+
+```toml
+memory_directory = "~/Sync/recall"
+memory_index = "~/.local/share/recall/memory-index.sqlite"
+```
+
+Do **not** put the SQLite memory index in Syncthing. SQLite databases, WAL and SHM files, FTS tables, embeddings, and caches are device-local derived data. Synchronizing a live SQLite database can corrupt it and create needless conflicts.
+
+`recall` detects standard Syncthing conflict filenames. Search indexes only the canonical JSON file and reports the canonical path plus every conflict-copy path. `edit`, `forget`, and `restore` refuse to change an affected memory. `status` and `doctor` report conflicts as warnings. Resolve conflict files manually; `recall` never merges, renames, overwrites, or deletes them.
+
+An invalid changed canonical file is reported and retried on the next refresh. If the local index contains an older valid version, search keeps that last good row. Canonical JSON remains the source of truth.
 
 ## Configuration
 
-The optional configuration file is `~/.config/agent-sessions/config.toml`.
+The preferred configuration file is `~/.config/recall/config.toml`:
 
 ```toml
 index = "~/.local/share/agent-sessions/index.sqlite"
+memory_directory = "~/.local/share/recall/memories"
+memory_index = "~/.local/share/recall/memory-index.sqlite"
 
 [embedding]
 url = "http://127.0.0.1:11434"
@@ -182,19 +230,62 @@ claude = true
 pi = "~/.pi/agent/sessions"
 codex = "~/.codex/sessions"
 claude = "~/.claude/projects"
-# Leave this empty to use `opencode db path`.
+# Leave empty to use `opencode db path`.
 opencode = ""
 ```
 
-Set `AGENT_SESSIONS_CONFIG` to use a different file. Command flags override configuration values.
+Configuration precedence is:
 
-The embedding URL must use a loopback address. This rule prevents accidental uploads of private session text.
+1. command flags;
+2. `RECALL_CONFIG`;
+3. `~/.config/recall/config.toml`;
+4. `AGENT_SESSIONS_CONFIG`;
+5. `~/.config/agent-sessions/config.toml`;
+6. defaults.
 
-The default semantic threshold is `0.60` for `all-minilm`. The semantic channel accepts only candidates at or above this cosine similarity.
+The embedding endpoint must use a loopback address. This prevents accidental uploads of private session or memory text. The default semantic threshold is `0.60`.
 
-## Source Data
+## Status and diagnostics
 
-The default adapters read these stores:
+```sh
+recall status
+recall doctor
+```
+
+`status` reports session statistics, canonical records, active and archived memories, stored and pending embeddings, invalid records, conflicts, and storage paths.
+
+`doctor` checks session adapters, both index schemas, canonical memory access, permissions, Ollama access, embedding dimensions, invalid records, and Syncthing conflicts. It reports conflicts without modifying them.
+
+## Privacy and permissions
+
+Application-created data directories use mode `0700`. Canonical JSON and SQLite files use mode `0600`. Existing user-selected Syncthing directories are not forcefully re-permissioned.
+
+Session indexes contain derived copies of private session text. Memory indexes contain derived copies of explicit memory content. Ollama requests are restricted to loopback addresses. There is no cloud service, automatic prompt injection, automatic recall, or automatic memory write.
+
+Recommended agent policy:
+
+> Agents may search recall when prior project knowledge may matter.  
+> Agents must not add, edit, archive, or restore memories unless the user explicitly requests it.
+
+## Existing `agent-sessions` users
+
+The compatibility command remains available:
+
+```sh
+agent-sessions index
+agent-sessions search "empty state"
+agent-sessions status
+agent-sessions doctor
+agent-sessions version
+```
+
+Its all-session search default, flags, text and JSON output, resume hints, rebuild behavior, and exit behavior are unchanged. Its configuration remains `~/.config/agent-sessions/config.toml`, or the path in `AGENT_SESSIONS_CONFIG`.
+
+Migration requires no data move. Install `recall`, keep the existing session index path, and add the two optional memory settings to a new recall configuration. If no recall configuration exists, `recall` falls back to the existing agent-sessions configuration. The tool does not move or copy the session index.
+
+## Session source data
+
+The default adapters read:
 
 | Harness | Default source |
 |---|---|
@@ -203,25 +294,11 @@ The default adapters read these stores:
 | OpenCode | The database returned by `opencode db path` |
 | Claude Code | `~/.claude/projects/**/*.jsonl` |
 
-The index includes user messages, assistant prose, compaction summaries, and useful session metadata.
-
-The index excludes tool output, reasoning, patches, snapshots, base64 data, and duplicate protocol events.
-
-## Storage and Privacy
-
-The default index is `~/.local/share/agent-sessions/index.sqlite`.
-
-The data directory uses mode `0700`. The index and lock file use mode `0600`.
-
-The index contains derived copies of private session text. Delete the SQLite, WAL, and SHM files to remove this data.
-
-The tool does not use a search server or a cloud embedding service. Ollama requests stay on the local machine.
+The session index includes user messages, assistant prose, compaction summaries, and useful metadata. It excludes tool output, reasoning, patches, snapshots, base64 data, and duplicate protocol events.
 
 ## Scheduling
 
-Run manual indexing first. Example systemd user units are available in [`contrib/systemd`](contrib/systemd).
-
-Install the units:
+Run manual indexing first. The existing systemd user timer in [`contrib/systemd`](contrib/systemd) can run `recall index`; do not install a second timer for memory indexing.
 
 ```sh
 mkdir -p ~/.config/systemd/user
@@ -232,32 +309,16 @@ systemctl --user enable --now agent-sessions-index.timer
 
 The timer does not start Ollama. Lexical indexing still succeeds when Ollama is unavailable.
 
-## Releases
-
-Use SemVer tags with a leading `v`. Keep release notes in `docs/releases/`.
-
-```sh
-${EDITOR:-vi} docs/releases/v0.2.0.md
-./scripts/release.sh v0.2.0
-```
-
-The release script creates the tag, pushes it, and publishes the GitHub Release.
-
 ## Development
 
-Run all checks:
+Run all checks and build both commands:
 
 ```sh
 make check
-```
-
-Build the executable:
-
-```sh
 make build
 ```
 
-Automated tests use sanitized fixtures and temporary SQLite databases. They do not require Ollama.
+Tests use temporary directories and fake embedders. They do not inspect real sessions or require Ollama.
 
 ## License
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Update the coding-agent session search index
+Description=Update coding-agent session and recall memory indexes
 
 [Timer]
 OnBootSec=5m
