@@ -35,8 +35,8 @@ ollama pull all-minilm
 Build and install both commands:
 
 ```sh
-git clone https://github.com/Thelost77/agent-sessions.git
-cd agent-sessions
+git clone https://github.com/Thelost77/recall.git
+cd recall
 make check
 make install
 ```
@@ -46,8 +46,8 @@ make install
 To install with Go:
 
 ```sh
-go install github.com/Thelost77/agent-sessions/cmd/recall@latest
-go install github.com/Thelost77/agent-sessions/cmd/agent-sessions@latest
+go install github.com/Thelost77/recall/cmd/recall@latest
+go install github.com/Thelost77/recall/cmd/agent-sessions@latest
 ```
 
 ## Search
@@ -302,9 +302,9 @@ Run manual indexing first. The existing systemd user timer in [`contrib/systemd`
 
 ```sh
 mkdir -p ~/.config/systemd/user
-cp contrib/systemd/agent-sessions-index.* ~/.config/systemd/user/
+cp contrib/systemd/recall-index.* ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable --now agent-sessions-index.timer
+systemctl --user enable --now recall-index.timer
 ```
 
 The timer does not start Ollama. Lexical indexing still succeeds when Ollama is unavailable.

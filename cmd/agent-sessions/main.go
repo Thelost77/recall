@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Thelost77/agent-sessions/internal/cli"
-	"github.com/Thelost77/agent-sessions/internal/config"
+	"github.com/Thelost77/recall/internal/cli"
+	"github.com/Thelost77/recall/internal/config"
 )
 
 var version = "dev"

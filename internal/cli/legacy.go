@@ -14,13 +14,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Thelost77/agent-sessions/internal/adapter"
-	"github.com/Thelost77/agent-sessions/internal/config"
-	"github.com/Thelost77/agent-sessions/internal/embed"
-	"github.com/Thelost77/agent-sessions/internal/indexer"
-	"github.com/Thelost77/agent-sessions/internal/model"
-	"github.com/Thelost77/agent-sessions/internal/search"
-	"github.com/Thelost77/agent-sessions/internal/store"
+	"github.com/Thelost77/recall/internal/adapter"
+	"github.com/Thelost77/recall/internal/config"
+	"github.com/Thelost77/recall/internal/embed"
+	"github.com/Thelost77/recall/internal/indexer"
+	"github.com/Thelost77/recall/internal/model"
+	"github.com/Thelost77/recall/internal/search"
+	"github.com/Thelost77/recall/internal/store"
 )
 
 func (a *App) runAgentSessions(ctx context.Context, cfg config.Config, configPath string, args []string) error {

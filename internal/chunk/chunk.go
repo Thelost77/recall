@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/Thelost77/agent-sessions/internal/model"
+	"github.com/Thelost77/recall/internal/model"
 	"golang.org/x/text/unicode/norm"
 )
 

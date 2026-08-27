@@ -42,4 +42,4 @@ fi
 
 git tag -a "$version" -m "$version"
 git push origin HEAD --follow-tags
-gh release create "$version" --title "agent-sessions ${version}" --notes-file "$notes_file"
+gh release create "$version" --title "recall ${version}" --notes-file "$notes_file"

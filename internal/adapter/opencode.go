@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Thelost77/agent-sessions/internal/model"
+	"github.com/Thelost77/recall/internal/model"
 
 	_ "modernc.org/sqlite"
 )

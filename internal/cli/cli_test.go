@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Thelost77/agent-sessions/internal/chunk"
-	"github.com/Thelost77/agent-sessions/internal/config"
-	"github.com/Thelost77/agent-sessions/internal/memory"
-	"github.com/Thelost77/agent-sessions/internal/model"
-	"github.com/Thelost77/agent-sessions/internal/store"
+	"github.com/Thelost77/recall/internal/chunk"
+	"github.com/Thelost77/recall/internal/config"
+	"github.com/Thelost77/recall/internal/memory"
+	"github.com/Thelost77/recall/internal/model"
+	"github.com/Thelost77/recall/internal/store"
 )
 
 func fixtureConfig(t *testing.T) config.Config {

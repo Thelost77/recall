@@ -7,7 +7,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/Thelost77/agent-sessions/internal/config"
+	"github.com/Thelost77/recall/internal/config"
 )
 
 type App struct {

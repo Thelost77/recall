@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Thelost77/agent-sessions/internal/config"
-	"github.com/Thelost77/agent-sessions/internal/embed"
-	"github.com/Thelost77/agent-sessions/internal/memory"
-	"github.com/Thelost77/agent-sessions/internal/project"
-	"github.com/Thelost77/agent-sessions/internal/search"
-	"github.com/Thelost77/agent-sessions/internal/store"
+	"github.com/Thelost77/recall/internal/config"
+	"github.com/Thelost77/recall/internal/embed"
+	"github.com/Thelost77/recall/internal/memory"
+	"github.com/Thelost77/recall/internal/project"
+	"github.com/Thelost77/recall/internal/search"
+	"github.com/Thelost77/recall/internal/store"
 )
 
 type recallSource int

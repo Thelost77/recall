@@ -1,4 +1,4 @@
-module github.com/Thelost77/agent-sessions
+module github.com/Thelost77/recall
 
 go 1.25.0
 

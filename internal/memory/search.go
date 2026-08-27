@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Thelost77/agent-sessions/internal/chunk"
-	"github.com/Thelost77/agent-sessions/internal/embed"
+	"github.com/Thelost77/recall/internal/chunk"
+	"github.com/Thelost77/recall/internal/embed"
 )
 
 const memoryCandidateLimit = 100

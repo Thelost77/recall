@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Thelost77/agent-sessions/internal/config"
+	"github.com/Thelost77/recall/internal/config"
 )
 
 func TestRunSearchLexicalOnlyDoesNotUseEmbedder(t *testing.T) {

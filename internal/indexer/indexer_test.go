@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Thelost77/agent-sessions/internal/model"
-	"github.com/Thelost77/agent-sessions/internal/store"
+	"github.com/Thelost77/recall/internal/model"
+	"github.com/Thelost77/recall/internal/store"
 )
 
 type fakeAdapter struct {
