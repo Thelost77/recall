@@ -12,7 +12,6 @@ Memory persistence is always manual. `recall` does not extract memories, summari
 - Rebuild the disposable local memory search index from canonical JSON.
 - Scope memories to a normalized Git remote or make them global.
 - Detect Syncthing conflict copies without changing them.
-- Preserve the existing `agent-sessions` command and output.
 - Keep all data and embedding requests on the local machine.
 
 Lexical and fuzzy search work without Ollama. Failed embeddings remain pending for a later indexing run.
@@ -32,7 +31,7 @@ ollama pull all-minilm
 
 ## Installation
 
-Build and install both commands:
+Build and install:
 
 ```sh
 git clone https://github.com/Thelost77/recall.git
@@ -41,13 +40,12 @@ make check
 make install
 ```
 
-`make install` installs `recall` and `agent-sessions` to `~/.local/bin` by default. Set `PREFIX` or `INSTALL_DIR` to use another path.
+`make install` installs `recall` to `~/.local/bin` by default. Set `PREFIX` or `INSTALL_DIR` to use another path.
 
 To install with Go:
 
 ```sh
 go install github.com/Thelost77/recall/cmd/recall@latest
-go install github.com/Thelost77/recall/cmd/agent-sessions@latest
 ```
 
 ## Search
@@ -179,7 +177,7 @@ Canonical memory records and local search data have different lifecycles:
 ```text
 Canonical records:          ~/.local/share/recall/memories/records/*.json
 Disposable memory index:    ~/.local/share/recall/memory-index.sqlite
-Existing session index:     ~/.local/share/agent-sessions/index.sqlite
+Disposable session index:    ~/.local/share/recall/index.sqlite
 ```
 
 Each canonical JSON file contains its schema version, opaque `m_` ID, scope, project identity, timestamps, archive state, and complete revision history. Writes use a temporary file, file sync, and atomic rename. Embeddings and search data never enter canonical JSON.
@@ -191,7 +189,7 @@ rm -f ~/.local/share/recall/memory-index.sqlite{,-wal,-shm}
 recall index
 ```
 
-Index rebuilds never delete canonical records. `recall index --rebuild` rebuilds both derived indexes. `agent-sessions index --rebuild` continues to rebuild only the session index.
+Index rebuilds never delete canonical records. `recall index --rebuild` rebuilds both derived indexes.
 
 A Syncthing directory can hold canonical records:
 
@@ -211,7 +209,7 @@ An invalid changed canonical file is reported and retried on the next refresh. I
 The preferred configuration file is `~/.config/recall/config.toml`:
 
 ```toml
-index = "~/.local/share/agent-sessions/index.sqlite"
+index = "~/.local/share/recall/index.sqlite"
 memory_directory = "~/.local/share/recall/memories"
 memory_index = "~/.local/share/recall/memory-index.sqlite"
 
@@ -239,9 +237,7 @@ Configuration precedence is:
 1. command flags;
 2. `RECALL_CONFIG`;
 3. `~/.config/recall/config.toml`;
-4. `AGENT_SESSIONS_CONFIG`;
-5. `~/.config/agent-sessions/config.toml`;
-6. defaults.
+4. defaults.
 
 The embedding endpoint must use a loopback address. This prevents accidental uploads of private session or memory text. The default semantic threshold is `0.60`.
 
@@ -266,22 +262,6 @@ Recommended agent policy:
 
 > Agents may search recall when prior project knowledge may matter.  
 > Agents must not add, edit, archive, or restore memories unless the user explicitly requests it.
-
-## Existing `agent-sessions` users
-
-The compatibility command remains available:
-
-```sh
-agent-sessions index
-agent-sessions search "empty state"
-agent-sessions status
-agent-sessions doctor
-agent-sessions version
-```
-
-Its all-session search default, flags, text and JSON output, resume hints, rebuild behavior, and exit behavior are unchanged. Its configuration remains `~/.config/agent-sessions/config.toml`, or the path in `AGENT_SESSIONS_CONFIG`.
-
-Migration requires no data move. Install `recall`, keep the existing session index path, and add the two optional memory settings to a new recall configuration. If no recall configuration exists, `recall` falls back to the existing agent-sessions configuration. The tool does not move or copy the session index.
 
 ## Session source data
 
@@ -311,7 +291,7 @@ The timer does not start Ollama. Lexical indexing still succeeds when Ollama is 
 
 ## Development
 
-Run all checks and build both commands:
+Run all checks and build:
 
 ```sh
 make check

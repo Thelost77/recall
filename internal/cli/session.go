@@ -9,7 +9,6 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -22,31 +21,6 @@ import (
 	"github.com/Thelost77/recall/internal/search"
 	"github.com/Thelost77/recall/internal/store"
 )
-
-func (a *App) runAgentSessions(ctx context.Context, cfg config.Config, configPath string, args []string) error {
-	if len(args) == 0 {
-		a.printAgentUsage()
-		return nil
-	}
-	switch args[0] {
-	case "index":
-		return a.runSessionIndex(ctx, cfg, args[1:], false)
-	case "search":
-		return a.RunSessionSearch(ctx, cfg, args[1:], true, "")
-	case "status":
-		return a.runSessionStatus(ctx, cfg, args[1:], false)
-	case "doctor":
-		return a.runSessionDoctor(ctx, cfg, configPath, args[1:], false)
-	case "version", "--version", "-version":
-		fmt.Fprintln(a.Stdout, BuildVersion(a.Version))
-		return nil
-	case "help", "--help", "-h":
-		a.printAgentUsage()
-		return nil
-	default:
-		return fmt.Errorf("unknown command %q", args[0])
-	}
-}
 
 func (a *App) runSessionIndex(ctx context.Context, cfg config.Config, args []string, recall bool) error {
 	flags := flag.NewFlagSet("index", flag.ContinueOnError)
@@ -112,7 +86,7 @@ func (a *App) runSessionIndex(ctx context.Context, cfg config.Config, args []str
 	return runErr
 }
 
-func (a *App) RunSessionSearch(ctx context.Context, cfg config.Config, args []string, legacy bool, defaultPath string) error {
+func (a *App) RunSessionSearch(ctx context.Context, cfg config.Config, args []string, defaultPath string) error {
 	flags := flag.NewFlagSet("search", flag.ContinueOnError)
 	flags.SetOutput(a.Stderr)
 	path := flags.String("path", defaultPath, "exact directory or parent directory")
@@ -179,7 +153,6 @@ func (a *App) RunSessionSearch(ctx context.Context, cfg config.Config, args []st
 		fmt.Fprintln(a.Stderr, "warning: semantic search unavailable:", response.SemanticError)
 	}
 	a.printSessionResults(response.Results, *explain)
-	_ = legacy
 	return nil
 }
 
@@ -491,21 +464,6 @@ func emptyDash(value string) string {
 		return "-"
 	}
 	return value
-}
-
-func (a *App) printAgentUsage() {
-	commands := []string{"index", "search", "status", "doctor", "version"}
-	sort.Strings(commands)
-	fmt.Fprintln(a.Stdout, "Search local coding-agent sessions.")
-	fmt.Fprintln(a.Stdout, "\nUsage:\n  agent-sessions <command> [options]")
-	fmt.Fprintln(a.Stdout, "\nCommands:")
-	for _, command := range commands {
-		fmt.Fprintln(a.Stdout, "  "+command)
-	}
-	fmt.Fprintln(a.Stdout, "\nExamples:")
-	fmt.Fprintln(a.Stdout, "  agent-sessions index")
-	fmt.Fprintln(a.Stdout, `  agent-sessions search --path ~/projects/qr-codes "QR codes without assets"`)
-	fmt.Fprintln(a.Stdout, "  agent-sessions status")
 }
 
 func removeSQLite(path string) error {

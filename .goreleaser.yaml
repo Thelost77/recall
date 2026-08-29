@@ -16,18 +16,6 @@ builds:
         goarch: arm64
     ldflags:
       - -s -w -X main.version={{.Version}}
-  - id: agent-sessions
-    main: ./cmd/agent-sessions
-    binary: agent-sessions
-    env:
-      - CGO_ENABLED=0
-    goos: [linux, darwin, windows]
-    goarch: [amd64, arm64]
-    ignore:
-      - goos: windows
-        goarch: arm64
-    ldflags:
-      - -s -w -X main.version={{.Version}}
 
 archives:
   - formats: [tar.gz]

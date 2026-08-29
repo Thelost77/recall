@@ -17,6 +17,9 @@ func TestDefaultSemanticThreshold(t *testing.T) {
 	if cfg.MemoryDirectory == "" || cfg.MemoryIndex == "" {
 		t.Fatalf("memory defaults are empty: %#v", cfg)
 	}
+	if filepath.Base(filepath.Dir(cfg.Index)) != "recall" {
+		t.Fatalf("session index default = %q, want under recall/", cfg.Index)
+	}
 }
 
 func TestRecallConfigurationPrecedence(t *testing.T) {
@@ -26,11 +29,6 @@ func TestRecallConfigurationPrecedence(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", configHome)
 	t.Setenv("XDG_DATA_HOME", filepath.Join(root, "data"))
 	t.Setenv("RECALL_CONFIG", "")
-	agentExplicit := filepath.Join(root, "agent-explicit.toml")
-	if err := os.WriteFile(agentExplicit, []byte("index = 'agent-explicit.sqlite'\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("AGENT_SESSIONS_CONFIG", agentExplicit)
 	recallPath := filepath.Join(configHome, "recall", "config.toml")
 	if err := os.MkdirAll(filepath.Dir(recallPath), 0o700); err != nil {
 		t.Fatal(err)
