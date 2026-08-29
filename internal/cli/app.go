@@ -40,18 +40,6 @@ func (a *App) defaults() {
 	}
 }
 
-func (a *App) RunAgentSessions(ctx context.Context, args []string) error {
-	a.defaults()
-	cfg, configPath, err := config.Load()
-	if err != nil {
-		return err
-	}
-	if err := config.ExpandPaths(&cfg); err != nil {
-		return err
-	}
-	return a.runAgentSessions(ctx, cfg, configPath, args)
-}
-
 func (a *App) RunRecall(ctx context.Context, args []string) error {
 	a.defaults()
 	cfg, configPath, err := config.LoadRecall()

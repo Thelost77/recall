@@ -125,20 +125,20 @@ func TestBareRecallReturnsSeparateGroups(t *testing.T) {
 	}
 }
 
-func TestLegacySessionTextAndJSONShapeRemainCompatible(t *testing.T) {
+func TestSessionSearchTextAndJSONShape(t *testing.T) {
 	cfg := fixtureConfig(t)
 	populateCLIIndexes(t, cfg)
 	var text bytes.Buffer
 	app := &App{Stdin: strings.NewReader(""), Stdout: &text, Stderr: &bytes.Buffer{}, Getwd: os.Getwd, Version: "dev"}
-	if err := app.RunSessionSearch(context.Background(), cfg, []string{"--lexical-only", "routing needle"}, true, ""); err != nil {
+	if err := app.RunSessionSearch(context.Background(), cfg, []string{"--lexical-only", "routing needle"}, ""); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(text.String(), "SESSIONS") || !strings.Contains(text.String(), "1. [pi] Fixture session") || !strings.Contains(text.String(), "Resume:") {
-		t.Fatalf("legacy text output changed: %s", text.String())
+		t.Fatalf("session text output changed: %s", text.String())
 	}
 	var jsonOutput bytes.Buffer
 	app.Stdout = &jsonOutput
-	if err := app.RunSessionSearch(context.Background(), cfg, []string{"--lexical-only", "--json", "routing needle"}, true, ""); err != nil {
+	if err := app.RunSessionSearch(context.Background(), cfg, []string{"--lexical-only", "--json", "routing needle"}, ""); err != nil {
 		t.Fatal(err)
 	}
 	var payload map[string]json.RawMessage
@@ -146,11 +146,11 @@ func TestLegacySessionTextAndJSONShapeRemainCompatible(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, ok := payload["results"]; !ok {
-		t.Fatalf("legacy JSON has no results: %s", jsonOutput.String())
+		t.Fatalf("session JSON has no results: %s", jsonOutput.String())
 	}
 	for _, unexpected := range []string{"query", "memories", "sessions", "warnings"} {
 		if _, ok := payload[unexpected]; ok {
-			t.Fatalf("legacy JSON gained %q: %s", unexpected, jsonOutput.String())
+			t.Fatalf("session JSON gained %q: %s", unexpected, jsonOutput.String())
 		}
 	}
 }
@@ -221,7 +221,7 @@ func TestCombinedJSONContainsStructuredConflictWarning(t *testing.T) {
 	}
 }
 
-func TestLegacySessionRebuildDoesNotModifyCanonicalMemories(t *testing.T) {
+func TestSessionRebuildDoesNotModifyCanonicalMemories(t *testing.T) {
 	cfg := fixtureConfig(t)
 	cfg.Sources.Pi = filepath.Join(t.TempDir(), "pi-sessions")
 	if err := os.MkdirAll(cfg.Sources.Pi, 0o700); err != nil {
@@ -246,7 +246,7 @@ func TestLegacySessionRebuildDoesNotModifyCanonicalMemories(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(before, after) {
-		t.Fatal("legacy session rebuild modified canonical memory")
+		t.Fatal("session rebuild modified canonical memory")
 	}
 }
 

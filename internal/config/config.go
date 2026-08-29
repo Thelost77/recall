@@ -49,7 +49,7 @@ func Default() (Config, error) {
 	}
 
 	return Config{
-		Index:           filepath.Join(dataHome, "agent-sessions", "index.sqlite"),
+		Index:           filepath.Join(dataHome, "recall", "index.sqlite"),
 		MemoryDirectory: filepath.Join(dataHome, "recall", "memories"),
 		MemoryIndex:     filepath.Join(dataHome, "recall", "memory-index.sqlite"),
 		Embedding: EmbeddingConfig{
@@ -69,14 +69,6 @@ func Default() (Config, error) {
 			Claude: filepath.Join(home, ".claude", "projects"),
 		},
 	}, nil
-}
-
-func Load() (Config, string, error) {
-	cfg, err := Default()
-	if err != nil {
-		return Config{}, "", err
-	}
-	return loadWithConfigPath(cfg, func() (string, error) { return configPathAgent() })
 }
 
 func LoadRecall() (Config, string, error) {
@@ -119,21 +111,6 @@ func loadWithConfigPath(cfg Config, pathResolver func() (string, error)) (Config
 	return cfg, path, nil
 }
 
-func configPathAgent() (string, error) {
-	if explicit := os.Getenv("AGENT_SESSIONS_CONFIG"); explicit != "" {
-		return expandHome(explicit)
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("resolve home directory: %w", err)
-	}
-	configHome := os.Getenv("XDG_CONFIG_HOME")
-	if configHome == "" {
-		configHome = filepath.Join(home, ".config")
-	}
-	return filepath.Join(configHome, "agent-sessions", "config.toml"), nil
-}
-
 func recallConfigPath() (string, error) {
 	if explicit := os.Getenv("RECALL_CONFIG"); explicit != "" {
 		return expandHome(explicit)
@@ -146,20 +123,7 @@ func recallConfigPath() (string, error) {
 	if configHome == "" {
 		configHome = filepath.Join(home, ".config")
 	}
-	recall := filepath.Join(configHome, "recall", "config.toml")
-	if _, err := os.Stat(recall); err == nil {
-		return recall, nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return recall, nil
-	}
-	if explicit := os.Getenv("AGENT_SESSIONS_CONFIG"); explicit != "" {
-		return expandHome(explicit)
-	}
-	legacy := filepath.Join(configHome, "agent-sessions", "config.toml")
-	if _, err := os.Stat(legacy); err == nil {
-		return legacy, nil
-	}
-	return recall, nil
+	return filepath.Join(configHome, "recall", "config.toml"), nil
 }
 
 func ExpandPaths(cfg *Config) error {
