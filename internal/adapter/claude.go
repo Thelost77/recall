@@ -39,13 +39,6 @@ func (c *Claude) Parse(_ context.Context, source model.Source) (model.ParsedSour
 		if err := json.Unmarshal(raw, &value); err != nil {
 			return err
 		}
-		typeName := stringValue(value, "type")
-		if typeName != "user" && typeName != "assistant" {
-			return nil
-		}
-		if isMeta, _ := value["isMeta"].(bool); isMeta {
-			return nil
-		}
 		if candidate := stringValue(value, "sessionId"); candidate != "" {
 			sessionID = candidate
 		}
@@ -58,6 +51,13 @@ func (c *Claude) Parse(_ context.Context, source model.Source) (model.ParsedSour
 		timestamp := parseISO(stringValue(value, "timestamp"))
 		updateBounds(&started, &updated, timestamp)
 
+		typeName := stringValue(value, "type")
+		if typeName != "user" && typeName != "assistant" {
+			return nil
+		}
+		if isMeta, _ := value["isMeta"].(bool); isMeta {
+			return nil
+		}
 		message, ok := value["message"].(map[string]any)
 		if !ok {
 			return nil

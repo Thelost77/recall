@@ -65,6 +65,27 @@ func TestClaudeExcludesMetadataAndCommandWrappers(t *testing.T) {
 	}
 }
 
+func TestClaudeParsesMetadataFromCommandOnlySession(t *testing.T) {
+	path := writeFixture(t, "claude-command-only.jsonl", `
+{"type":"mode","mode":"normal","sessionId":"claude-session"}
+{"type":"system","subtype":"local_command","sessionId":"claude-session","uuid":"system-1","timestamp":"2026-07-01T10:00:00Z","cwd":"/work","gitBranch":"main","content":"<command-name>/fast</command-name>"}
+`)
+	parsed := parseOne(t, &Claude{Root: filepath.Dir(path)}, model.Source{Path: path, Key: "source", Harness: "claude"})
+	if len(parsed.Sessions) != 1 {
+		t.Fatalf("session count = %d, want 1", len(parsed.Sessions))
+	}
+	session := parsed.Sessions[0]
+	if session.NativeID != "claude-session" || session.CWD != "/work" || session.GitBranch != "main" {
+		t.Fatalf("unexpected session metadata: %#v", session)
+	}
+	if session.StartedAt.IsZero() || !session.StartedAt.Equal(session.UpdatedAt) {
+		t.Fatalf("unexpected session bounds: %v to %v", session.StartedAt, session.UpdatedAt)
+	}
+	if len(parsed.Entries) != 0 {
+		t.Fatalf("entry count = %d, want 0", len(parsed.Entries))
+	}
+}
+
 func TestOpenCodeIndexesOnlyNonSyntheticTextParts(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "opencode.db")
 	db, err := sql.Open("sqlite", path)
