@@ -1,6 +1,6 @@
 # recall
 
-`recall` searches local coding-agent sessions and explicit, durable memories from one command. It supports session data from [Pi](https://github.com/badlogic/pi-mono), [Codex](https://github.com/openai/codex), [OpenCode](https://github.com/anomalyco/opencode), and [Claude Code](https://github.com/anthropics/claude-code).
+`recall` searches local coding-agent sessions and explicit, durable memories from one command. It supports session data from [Pi](https://github.com/badlogic/pi-mono), [Codex](https://github.com/openai/codex), [OpenCode](https://github.com/anomalyco/opencode), [Claude Code](https://github.com/anthropics/claude-code), and Grok Build.
 
 Memory persistence is always manual. `recall` does not extract memories, summarize sessions, inject prompts, or write memory unless a user runs `remember`, `edit`, `forget`, or `restore`.
 
@@ -223,11 +223,13 @@ pi = true
 codex = true
 opencode = true
 claude = true
+grok = true
 
 [sources]
 pi = "~/.pi/agent/sessions"
 codex = "~/.codex/sessions"
 claude = "~/.claude/projects"
+grok = "~/.grok/sessions"
 # Leave empty to use `opencode db path`.
 opencode = ""
 ```
@@ -273,6 +275,9 @@ The default adapters read:
 | Codex | `~/.codex/sessions/**/*.jsonl` |
 | OpenCode | The database returned by `opencode db path` |
 | Claude Code | `~/.claude/projects/**/*.jsonl` |
+| Grok Build | `~/.grok/sessions/<encoded-cwd>/<session-id>/updates.jsonl` |
+
+Grok metadata comes from the sibling `summary.json`. When `GROK_HOME` is set and `sources.grok` is left unset, the default root is `$GROK_HOME/sessions`. A group directory whose encoded name was replaced by a hash uses the `.cwd` file in that group.
 
 The session index includes user messages, assistant prose, compaction summaries, and useful metadata. It excludes tool output, reasoning, patches, snapshots, base64 data, and duplicate protocol events.
 

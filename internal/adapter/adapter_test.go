@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/Thelost77/recall/internal/model"
 	_ "modernc.org/sqlite"
@@ -131,6 +133,112 @@ func TestOpenCodeIndexesOnlyNonSyntheticTextParts(t *testing.T) {
 	}
 	if parsed.Entries[1].Text != "Use the dialog" {
 		t.Fatalf("assistant text = %q", parsed.Entries[1].Text)
+	}
+}
+
+func TestGrokIndexesPromptsAndAssistantProse(t *testing.T) {
+	root := t.TempDir()
+	sessionDir := filepath.Join(root, "%2Fwork%2Fqr", "grok-session")
+	if err := os.MkdirAll(sessionDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	summary := `{
+		"info": {"id": "grok-session", "cwd": "/work/qr"},
+		"generated_title": "QR generation",
+		"created_at": "2026-07-29T10:00:00Z",
+		"updated_at": "2026-07-29T10:05:00Z",
+		"head_branch": "main",
+		"git_remotes": ["https://github.com/example/qr.git"],
+		"parent_session_id": "parent-session"
+	}`
+	if err := os.WriteFile(filepath.Join(sessionDir, "summary.json"), []byte(summary), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	updates := `
+{"timestamp":1790016875,"method":"session/update","params":{"sessionId":"grok-session","update":{"sessionUpdate":"user_message_chunk","content":{"type":"text","text":"<user_query>Generate QR codes</user_query>"}},"_meta":{"eventId":"user-1","agentTimestampMs":1790016875029}}}
+{"timestamp":1790016878,"method":"session/update","params":{"sessionId":"grok-session","update":{"sessionUpdate":"agent_thought_chunk","content":{"type":"text","text":"hidden reasoning"}}}}
+{"timestamp":1790016879,"method":"session/update","params":{"sessionId":"grok-session","update":{"sessionUpdate":"tool_call","toolCallId":"call-1","title":"list_dir"}}}
+{"timestamp":1790016880,"method":"session/update","params":{"sessionId":"grok-session","update":{"sessionUpdate":"tool_call_update","toolCallId":"call-1","content":{"type":"text","text":"secret tool output"}}}}
+{"timestamp":1790016885,"method":"session/update","params":{"sessionId":"grok-session","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Use an empty-state dialog."}},"_meta":{"eventId":"assistant-1","agentTimestampMs":1790016885000}}}
+{"timestamp":"broken","type" BROKEN}
+`
+	if err := os.WriteFile(filepath.Join(sessionDir, "updates.jsonl"), []byte(updates), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sessionDir, "chat_history.jsonl"), []byte(`{"type":"user","content":"do not index this file"}`+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "prompt_history.jsonl"), []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	adapter := &Grok{Root: root}
+	sources, err := adapter.Discover(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sources) != 1 || !strings.HasSuffix(sources[0].Path, "updates.jsonl") {
+		t.Fatalf("unexpected sources: %#v", sources)
+	}
+	parsed := parseOne(t, adapter, sources[0])
+	session := parsed.Sessions[0]
+	if session.NativeID != "grok-session" || session.Name != "QR generation" || session.CWD != "/work/qr" {
+		t.Fatalf("unexpected session: %#v", session)
+	}
+	if session.GitBranch != "main" || session.GitRemote != "https://github.com/example/qr.git" || session.ParentID != "parent-session" {
+		t.Fatalf("unexpected git metadata: %#v", session)
+	}
+	if len(parsed.Entries) != 2 {
+		t.Fatalf("entry count = %d, want 2", len(parsed.Entries))
+	}
+	if parsed.Entries[0].Role != "user" || parsed.Entries[0].Text != "Generate QR codes" {
+		t.Fatalf("user entry = %#v", parsed.Entries[0])
+	}
+	if parsed.Entries[1].Text != "Use an empty-state dialog." {
+		t.Fatalf("assistant text = %q", parsed.Entries[1].Text)
+	}
+	if len(parsed.Warnings) != 1 {
+		t.Fatalf("warning count = %d, want 1", len(parsed.Warnings))
+	}
+	wantUserTime := time.UnixMilli(1790016875029).UTC()
+	if !parsed.Entries[0].Timestamp.Equal(wantUserTime) {
+		t.Fatalf("user timestamp = %s, want %s", parsed.Entries[0].Timestamp, wantUserTime)
+	}
+}
+
+func TestGrokFallsBackToDirectoryIdentity(t *testing.T) {
+	root := t.TempDir()
+	sessionDir := filepath.Join(root, "slug-hash", "dir-session")
+	if err := os.MkdirAll(sessionDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "slug-hash", ".cwd"), []byte("/work/from-cwd\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	updates := `{"timestamp":1790016875,"params":{"update":{"sessionUpdate":"user_message_chunk","content":{"type":"text","text":"Analyze this repo"}}}}` + "\n"
+	path := filepath.Join(sessionDir, "updates.jsonl")
+	if err := os.WriteFile(path, []byte(updates), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	parsed := parseOne(t, &Grok{Root: root}, model.Source{Path: path, Key: "source", Harness: "grok"})
+	session := parsed.Sessions[0]
+	if session.NativeID != "dir-session" || session.CWD != "/work/from-cwd" || session.Name != "Analyze this repo" {
+		t.Fatalf("unexpected session: %#v", session)
+	}
+	if len(parsed.Entries) != 1 || parsed.Entries[0].NativeID != "message-1" {
+		t.Fatalf("unexpected entries: %#v", parsed.Entries)
+	}
+	encodedDir := filepath.Join(root, "%2Fwork%2Fencoded", "encoded-session")
+	if err := os.MkdirAll(encodedDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	encodedPath := filepath.Join(encodedDir, "updates.jsonl")
+	if err := os.WriteFile(encodedPath, []byte(updates), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	parsed = parseOne(t, &Grok{Root: root}, model.Source{Path: encodedPath, Key: "source", Harness: "grok"})
+	if parsed.Sessions[0].CWD != "/work/encoded" || parsed.Sessions[0].NativeID != "encoded-session" {
+		t.Fatalf("unexpected encoded session: %#v", parsed.Sessions[0])
 	}
 }
 

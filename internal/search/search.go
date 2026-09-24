@@ -527,6 +527,8 @@ func resumeHint(item candidate) string {
 		command = "opencode --session " + shellQuote(item.SessionID)
 	case "claude":
 		command = "claude --resume " + shellQuote(item.SessionID)
+	case "grok":
+		command = "grok --resume " + shellQuote(item.SessionID)
 	}
 	if item.CWD == "" {
 		return command

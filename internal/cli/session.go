@@ -317,6 +317,8 @@ func makeAdapters(ctx context.Context, cfg config.Config, selected []string) ([]
 			value = &adapter.OpenCode{DBPath: cfg.Sources.OpenCode}
 		case "claude":
 			value = &adapter.Claude{Root: cfg.Sources.Claude}
+		case "grok":
+			value = &adapter.Grok{Root: cfg.Sources.Grok}
 		default:
 			return nil, func() {}, fmt.Errorf("unsupported harness %q", name)
 		}
@@ -339,7 +341,7 @@ func selectHarnesses(cfg config.Config, requested string) ([]string, error) {
 		return parseHarnessList(requested)
 	}
 	var values []string
-	for _, name := range []string{"pi", "codex", "opencode", "claude"} {
+	for _, name := range []string{"pi", "codex", "opencode", "claude", "grok"} {
 		if cfg.Harnesses[name] {
 			values = append(values, name)
 		}
@@ -354,7 +356,7 @@ func parseHarnessList(value string) ([]string, error) {
 	if strings.TrimSpace(value) == "" {
 		return nil, nil
 	}
-	allowed := map[string]bool{"pi": true, "codex": true, "opencode": true, "claude": true}
+	allowed := map[string]bool{"pi": true, "codex": true, "opencode": true, "claude": true, "grok": true}
 	seen := map[string]bool{}
 	var result []string
 	for _, item := range strings.Split(value, ",") {

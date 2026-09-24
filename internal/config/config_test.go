@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -19,6 +20,31 @@ func TestDefaultSemanticThreshold(t *testing.T) {
 	}
 	if filepath.Base(filepath.Dir(cfg.Index)) != "recall" {
 		t.Fatalf("session index default = %q, want under recall/", cfg.Index)
+	}
+}
+
+func TestDefaultEnablesGrok(t *testing.T) {
+	t.Setenv("GROK_HOME", "")
+	cfg, err := Default()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Harnesses["grok"] {
+		t.Fatal("grok harness is disabled")
+	}
+	if !strings.HasSuffix(cfg.Sources.Grok, filepath.Join(".grok", "sessions")) {
+		t.Fatalf("grok source = %q", cfg.Sources.Grok)
+	}
+
+	grokHome := filepath.Join(t.TempDir(), "grok-home")
+	t.Setenv("GROK_HOME", grokHome)
+	cfg, err = Default()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(grokHome, "sessions")
+	if cfg.Sources.Grok != want {
+		t.Fatalf("grok source = %q, want %q", cfg.Sources.Grok, want)
 	}
 }
 
