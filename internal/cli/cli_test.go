@@ -260,3 +260,18 @@ func TestRecallHasNoConflictResolutionCommand(t *testing.T) {
 		t.Fatalf("help advertises a conflict resolution command: %s", output)
 	}
 }
+
+func TestRecallShortVersionFlagPrintsVersion(t *testing.T) {
+	cfg := fixtureConfig(t)
+	want, _, err := runRecallFixture(t, cfg, "version")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _, err := runRecallFixture(t, cfg, "-v")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("-v output = %q, want %q", got, want)
+	}
+}

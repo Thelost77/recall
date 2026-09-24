@@ -72,7 +72,7 @@ func (a *App) runRecall(ctx context.Context, cfg config.Config, configPath strin
 		return a.runRecallStatus(ctx, cfg, args[1:])
 	case "doctor":
 		return a.runRecallDoctor(ctx, cfg, configPath, args[1:])
-	case "version", "--version", "-version":
+	case "version", "--version", "-version", "-v":
 		fmt.Fprintln(a.Stdout, BuildVersion(a.Version))
 		return nil
 	case "help", "--help", "-h":
