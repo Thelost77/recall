@@ -35,7 +35,6 @@ type SourcesConfig struct {
 	Codex    string `toml:"codex"`
 	OpenCode string `toml:"opencode"`
 	Claude   string `toml:"claude"`
-	Grok     string `toml:"grok"`
 }
 
 func Default() (Config, error) {
@@ -63,13 +62,11 @@ func Default() (Config, error) {
 			"codex":    true,
 			"opencode": true,
 			"claude":   true,
-			"grok":     true,
 		},
 		Sources: SourcesConfig{
 			Pi:     filepath.Join(home, ".pi", "agent", "sessions"),
 			Codex:  filepath.Join(home, ".codex", "sessions"),
 			Claude: filepath.Join(home, ".claude", "projects"),
-			Grok:   defaultGrokSessions(home),
 		},
 	}, nil
 }
@@ -146,7 +143,6 @@ func ExpandPaths(cfg *Config) error {
 	for name, value := range map[string]*string{
 		"pi": &cfg.Sources.Pi, "codex": &cfg.Sources.Codex,
 		"opencode": &cfg.Sources.OpenCode, "claude": &cfg.Sources.Claude,
-		"grok": &cfg.Sources.Grok,
 	} {
 		if *value == "" {
 			continue
@@ -187,13 +183,6 @@ func DefaultMemoryIndex() string {
 		dataHome = filepath.Join(home, ".local", "share")
 	}
 	return filepath.Join(dataHome, "recall", "memory-index.sqlite")
-}
-
-func defaultGrokSessions(home string) string {
-	if grokHome := os.Getenv("GROK_HOME"); grokHome != "" {
-		return filepath.Join(grokHome, "sessions")
-	}
-	return filepath.Join(home, ".grok", "sessions")
 }
 
 func expandHome(path string) (string, error) {
