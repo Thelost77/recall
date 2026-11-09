@@ -349,7 +349,7 @@ func (i *Index) Backfill(ctx context.Context, provider embed.Provider) (int, err
 		for position, item := range pending {
 			texts[position] = item.Content
 		}
-		vectors, err := provider.Embed(ctx, texts)
+		vectors, err := provider.EmbedDocuments(ctx, texts)
 		if err != nil {
 			return total, err
 		}

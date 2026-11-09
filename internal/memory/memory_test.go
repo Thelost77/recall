@@ -16,7 +16,14 @@ type fixtureEmbedder struct {
 }
 
 func (f fixtureEmbedder) Fingerprint() string { return f.fingerprint }
-func (f fixtureEmbedder) Embed(_ context.Context, texts []string) ([][]float32, error) {
+func (f fixtureEmbedder) EmbedQuery(ctx context.Context, query string) ([]float32, error) {
+	vectors, err := f.EmbedDocuments(ctx, []string{query})
+	if err != nil {
+		return nil, err
+	}
+	return vectors[0], nil
+}
+func (f fixtureEmbedder) EmbedDocuments(_ context.Context, texts []string) ([][]float32, error) {
 	if f.fail {
 		return nil, errors.New("fixture embedding failure")
 	}

@@ -35,7 +35,10 @@ func (f *fakeAdapter) Parse(context.Context, model.Source) (model.ParsedSource, 
 type fakeEmbedder struct{ calls, texts int }
 
 func (f *fakeEmbedder) Fingerprint() string { return "fake:v1" }
-func (f *fakeEmbedder) Embed(_ context.Context, texts []string) ([][]float32, error) {
+func (f *fakeEmbedder) EmbedQuery(context.Context, string) ([]float32, error) {
+	return []float32{1, 0}, nil
+}
+func (f *fakeEmbedder) EmbedDocuments(_ context.Context, texts []string) ([][]float32, error) {
 	f.calls++
 	f.texts += len(texts)
 	vectors := make([][]float32, len(texts))

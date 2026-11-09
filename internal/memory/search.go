@@ -232,11 +232,11 @@ func (s *Searcher) fuzzy(ctx context.Context, query string, filters Filters) ([]
 }
 
 func (s *Searcher) semantic(ctx context.Context, query string, filters Filters) ([]memoryCandidate, error) {
-	vectors, err := s.Embedder.Embed(ctx, []string{query})
+	queryVector, err := s.Embedder.EmbedQuery(ctx, query)
 	if err != nil {
 		return nil, err
 	}
-	if len(vectors) != 1 {
+	if len(queryVector) == 0 {
 		return nil, fmt.Errorf("embedder returned no query vector")
 	}
 	where, args := memoryFilterSQL(filters, "m")
@@ -260,10 +260,10 @@ func (s *Searcher) semantic(ctx context.Context, query string, filters Filters) 
 			return nil, err
 		}
 		vector, err := embed.Decode(encoded)
-		if err != nil || len(vector) != len(vectors[0]) {
+		if err != nil || len(vector) != len(queryVector) {
 			continue
 		}
-		item.RawScore, _ = embed.Dot(vectors[0], vector)
+		item.RawScore, _ = embed.Dot(queryVector, vector)
 		if item.RawScore < s.SemanticThreshold {
 			continue
 		}

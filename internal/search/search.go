@@ -278,11 +278,10 @@ func (s *Searcher) fuzzy(ctx context.Context, query string, filters Filters) ([]
 }
 
 func (s *Searcher) semantic(ctx context.Context, query string, filters Filters) ([]candidate, error) {
-	vectors, err := s.Embedder.Embed(ctx, []string{query})
+	queryVector, err := s.Embedder.EmbedQuery(ctx, query)
 	if err != nil {
 		return nil, err
 	}
-	queryVector := vectors[0]
 	where, args := filterSQL(filters, "s", "c")
 	statement := `
 		SELECT s.key, s.harness, s.native_id, s.parent_id, s.name, s.cwd,

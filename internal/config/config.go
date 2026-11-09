@@ -11,8 +11,8 @@ import (
 
 const (
 	DefaultEmbeddingURL      = "http://127.0.0.1:11434"
-	DefaultEmbeddingModel    = "all-minilm"
-	DefaultSemanticThreshold = 0.60
+	DefaultEmbeddingModel    = "embeddinggemma-2:270m"
+	DefaultSemanticThreshold = 0.80
 )
 
 type Config struct {

@@ -20,13 +20,13 @@ Lexical and fuzzy search work without Ollama. Failed embeddings remain pending f
 
 - Go 1.25 or later
 - Git for project-scoped memory and project-default searches
-- [Ollama](https://ollama.com/) for optional semantic search
-- The `all-minilm` model for the default embedding configuration
+- [Ollama](https://ollama.com/) 0.40.4 or later for optional semantic search
+- The `embeddinggemma-2:270m` model for the default embedding configuration
 
 Install the default model:
 
 ```sh
-ollama pull all-minilm
+ollama pull embeddinggemma-2:270m
 ```
 
 ## Installation
@@ -215,8 +215,8 @@ memory_index = "~/.local/share/recall/memory-index.sqlite"
 
 [embedding]
 url = "http://127.0.0.1:11434"
-model = "all-minilm"
-threshold = 0.60
+model = "embeddinggemma-2:270m"
+threshold = 0.80
 
 [harnesses]
 pi = true
@@ -239,7 +239,9 @@ Configuration precedence is:
 3. `~/.config/recall/config.toml`;
 4. defaults.
 
-The embedding endpoint must use a loopback address. This prevents accidental uploads of private session or memory text. The default semantic threshold is `0.60`.
+The embedding endpoint must use a loopback address. This prevents accidental uploads of private session or memory text. The default semantic threshold is `0.80`.
+
+The embedding model must be an EmbeddingGemma model, because `recall` adds EmbeddingGemma prompt prefixes to queries and documents. When you change the model, the next `recall index` embeds all chunks and memories again.
 
 ## Status and diagnostics
 

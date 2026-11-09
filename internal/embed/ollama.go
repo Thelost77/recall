@@ -14,11 +14,18 @@ import (
 	"time"
 )
 
-const preprocessingVersion = "chunks-v1"
+const preprocessingVersion = "chunks-v2"
+
+// EmbeddingGemma prompt formats for search queries and untitled documents.
+const (
+	queryPrefix    = "task: search result | query: "
+	documentPrefix = "title: none | text: "
+)
 
 type Provider interface {
 	Fingerprint() string
-	Embed(context.Context, []string) ([][]float32, error)
+	EmbedQuery(context.Context, string) ([]float32, error)
+	EmbedDocuments(context.Context, []string) ([][]float32, error)
 }
 
 type Client struct {
@@ -66,7 +73,23 @@ func (c *Client) Fingerprint() string {
 
 func (c *Client) Model() string { return c.model }
 
-func (c *Client) Embed(ctx context.Context, texts []string) ([][]float32, error) {
+func (c *Client) EmbedQuery(ctx context.Context, query string) ([]float32, error) {
+	vectors, err := c.embed(ctx, []string{queryPrefix + query})
+	if err != nil {
+		return nil, err
+	}
+	return vectors[0], nil
+}
+
+func (c *Client) EmbedDocuments(ctx context.Context, texts []string) ([][]float32, error) {
+	prefixed := make([]string, len(texts))
+	for index, text := range texts {
+		prefixed[index] = documentPrefix + text
+	}
+	return c.embed(ctx, prefixed)
+}
+
+func (c *Client) embed(ctx context.Context, texts []string) ([][]float32, error) {
 	if len(texts) == 0 {
 		return nil, nil
 	}

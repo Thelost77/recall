@@ -11,8 +11,8 @@ func TestDefaultSemanticThreshold(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Embedding.Threshold != 0.60 {
-		t.Fatalf("semantic threshold = %f, want 0.60", cfg.Embedding.Threshold)
+	if cfg.Embedding.Threshold != 0.80 {
+		t.Fatalf("semantic threshold = %f, want 0.80", cfg.Embedding.Threshold)
 	}
 	if cfg.MemoryDirectory == "" || cfg.MemoryIndex == "" {
 		t.Fatalf("memory defaults are empty: %#v", cfg)

@@ -280,11 +280,11 @@ func (a *App) runSessionDoctor(ctx context.Context, cfg config.Config, configPat
 	if err != nil {
 		fmt.Fprintln(a.Stdout, "[FAIL] embedder ", err)
 		failures++
-	} else if vectors, err := embedder.Embed(ctx, []string{"agent session search health check"}); err != nil {
+	} else if vector, err := embedder.EmbedQuery(ctx, "agent session search health check"); err != nil {
 		fmt.Fprintln(a.Stdout, "[FAIL] embedder ", err)
 		failures++
 	} else {
-		fmt.Fprintf(a.Stdout, "[OK]   embedder %s (%d dimensions)\n", embedder.Model(), len(vectors[0]))
+		fmt.Fprintf(a.Stdout, "[OK]   embedder %s (%d dimensions)\n", embedder.Model(), len(vector))
 	}
 	if failures > 0 {
 		return fmt.Errorf("doctor found %d failure(s)", failures)

@@ -1,7 +1,11 @@
 package embed
 
 import (
+	"context"
+	"encoding/json"
 	"math"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -37,5 +41,50 @@ func TestNewRejectsRemoteEmbeddingURL(t *testing.T) {
 	}
 	if _, err := New("http://127.0.0.1:11434", "model"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestClientAddsEmbeddingGemmaPrompts(t *testing.T) {
+	var inputs [][]string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request embedRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+		}
+		inputs = append(inputs, request.Input)
+		vectors := make([][]float64, len(request.Input))
+		for index := range vectors {
+			vectors[index] = []float64{1, 0}
+		}
+		_ = json.NewEncoder(w).Encode(embedResponse{Embeddings: vectors})
+	}))
+	defer server.Close()
+	client, err := New(server.URL, "model")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if _, err := client.EmbedQuery(ctx, "migration decision"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.EmbedDocuments(ctx, []string{"first", "second"}); err != nil {
+		t.Fatal(err)
+	}
+	want := [][]string{
+		{"task: search result | query: migration decision"},
+		{"title: none | text: first", "title: none | text: second"},
+	}
+	if len(inputs) != len(want) {
+		t.Fatalf("requests = %q, want %q", inputs, want)
+	}
+	for request := range want {
+		if len(inputs[request]) != len(want[request]) {
+			t.Fatalf("requests = %q, want %q", inputs, want)
+		}
+		for index := range want[request] {
+			if inputs[request][index] != want[request][index] {
+				t.Fatalf("requests = %q, want %q", inputs, want)
+			}
+		}
 	}
 }

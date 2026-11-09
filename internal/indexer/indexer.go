@@ -137,7 +137,7 @@ func (i *Indexer) backfill(ctx context.Context, options Options) (int, error) {
 			texts[index] = item.Text
 			ids[index] = item.ID
 		}
-		vectors, err := i.Embedder.Embed(ctx, texts)
+		vectors, err := i.Embedder.EmbedDocuments(ctx, texts)
 		if err != nil {
 			return total, err
 		}

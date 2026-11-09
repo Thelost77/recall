@@ -16,7 +16,10 @@ import (
 type semanticFixture struct{}
 
 func (semanticFixture) Fingerprint() string { return "fixture:v1" }
-func (semanticFixture) Embed(context.Context, []string) ([][]float32, error) {
+func (semanticFixture) EmbedQuery(context.Context, string) ([]float32, error) {
+	return []float32{1, 0}, nil
+}
+func (semanticFixture) EmbedDocuments(context.Context, []string) ([][]float32, error) {
 	return [][]float32{{1, 0}}, nil
 }
 
