@@ -280,6 +280,13 @@ The default adapters read:
 | OpenCode | The database returned by `opencode db path` |
 | Claude Code | `~/.claude/projects/**/*.jsonl` |
 
+`recall index` and `recall doctor` read a harness only when its CLI is on `PATH`.
+Each CLI has the same name as its harness: `pi`, `codex`, `opencode`, or `claude`.
+When a CLI is not on `PATH`, `recall index` keeps the indexed sessions of that harness without change.
+`recall index --rebuild` makes a new index, so it does not keep the sessions of a skipped harness.
+When a CLI is on `PATH` and its source does not exist, the harness has no sessions.
+Then `recall index` removes the indexed sessions of that harness.
+
 The session index includes user messages, assistant prose, compaction summaries, and useful metadata. It excludes tool output, reasoning, patches, snapshots, base64 data, and duplicate protocol events.
 
 ## Scheduling
@@ -294,6 +301,11 @@ systemctl --user enable --now recall-index.timer
 ```
 
 The timer does not start Ollama. Lexical indexing still succeeds when Ollama is unavailable.
+
+The systemd user service can have a different `PATH` than your shell.
+The timer skips each harness whose CLI is not on the `PATH` of the service, and `--quiet` shows no message for it.
+Use `systemctl --user show-environment` to show that `PATH`.
+If a harness CLI is not on that `PATH`, add the directory of the CLI to `PATH` in the service.
 
 ## Development
 

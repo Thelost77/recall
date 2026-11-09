@@ -36,7 +36,7 @@ func fileSources(ctx context.Context, harness, root string, skip func(string) bo
 		return nil, nil
 	}
 	if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
-		return nil, fmt.Errorf("%s source root %s does not exist", harness, root)
+		return nil, nil
 	} else if err != nil {
 		return nil, fmt.Errorf("inspect %s source root %s: %w", harness, root, err)
 	}

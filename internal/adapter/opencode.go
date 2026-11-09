@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"os/exec"
 	"sort"
 	"strconv"
@@ -16,6 +18,8 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+var errMissingDatabase = errors.New("OpenCode database does not exist")
+
 type OpenCode struct {
 	DBPath string
 	db     *sql.DB
@@ -24,7 +28,9 @@ type OpenCode struct {
 func (o *OpenCode) Name() string { return "opencode" }
 
 func (o *OpenCode) Discover(ctx context.Context) ([]model.Source, error) {
-	if err := o.open(ctx); err != nil {
+	if err := o.open(ctx); errors.Is(err, errMissingDatabase) {
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 	if err := requireColumns(ctx, o.db, "session", []string{
@@ -163,6 +169,11 @@ func (o *OpenCode) open(ctx context.Context) error {
 	}
 	if o.DBPath == "" {
 		return fmt.Errorf("locate OpenCode database: command returned an empty path")
+	}
+	if _, err := os.Stat(o.DBPath); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("%w: %s", errMissingDatabase, o.DBPath)
+	} else if err != nil {
+		return fmt.Errorf("inspect OpenCode database %s: %w", o.DBPath, err)
 	}
 
 	dsn := (&url.URL{Scheme: "file", Path: o.DBPath, RawQuery: "mode=ro"}).String()

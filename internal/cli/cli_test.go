@@ -301,6 +301,51 @@ func TestIndexDeletesSessionsOfRemovedHarness(t *testing.T) {
 	}
 }
 
+func TestIndexSkipsHarnessWithoutCommand(t *testing.T) {
+	for _, test := range []struct {
+		name         string
+		available    bool
+		wantSessions int
+	}{
+		{name: "command missing", available: false, wantSessions: 1},
+		{name: "command present", available: true, wantSessions: 0},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			cfg := fixtureConfig(t)
+			populateCLIIndexes(t, cfg)
+			cfg.Sources.Pi = filepath.Join(t.TempDir(), "missing")
+			bin := t.TempDir()
+			if test.available {
+				if err := os.WriteFile(filepath.Join(bin, "pi"), nil, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			t.Setenv("PATH", bin)
+
+			var stderr bytes.Buffer
+			app := &App{Stdin: strings.NewReader(""), Stdout: &bytes.Buffer{}, Stderr: &stderr, Getwd: os.Getwd, Version: "dev"}
+			if err := app.runSessionIndex(context.Background(), cfg, nil, false); err != nil {
+				t.Fatal(err)
+			}
+			if skipped := strings.Contains(stderr.String(), "Skipping pi: pi command not found"); skipped == test.available {
+				t.Fatalf("skip message shown = %v, stderr: %s", skipped, stderr.String())
+			}
+			storage, err := store.Open(context.Background(), cfg.Index)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer storage.Close()
+			versions, err := storage.SourceVersions(context.Background(), "pi")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(versions) != test.wantSessions {
+				t.Fatalf("indexed pi sources = %d, want %d", len(versions), test.wantSessions)
+			}
+		})
+	}
+}
+
 func TestRecallHasNoConflictResolutionCommand(t *testing.T) {
 	cfg := fixtureConfig(t)
 	output, _, err := runRecallFixture(t, cfg, "help")

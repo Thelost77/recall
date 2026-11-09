@@ -134,6 +134,32 @@ func TestOpenCodeIndexesOnlyNonSyntheticTextParts(t *testing.T) {
 	}
 }
 
+func TestMissingSourceHasNoSessions(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing")
+	for _, value := range []model.Adapter{
+		&Pi{Root: missing}, &Codex{Root: missing}, &Claude{Root: missing},
+		&OpenCode{DBPath: filepath.Join(missing, "opencode.db")},
+	} {
+		sources, err := value.Discover(context.Background())
+		if err != nil || len(sources) != 0 {
+			t.Fatalf("%s Discover() = %d sources, %v; want 0 sources, nil", value.Name(), len(sources), err)
+		}
+	}
+}
+
+func TestOpenCodeFailsWhenCommandCannotStart(t *testing.T) {
+	bin := t.TempDir()
+	if err := os.WriteFile(filepath.Join(bin, "opencode"), []byte("#!/nonexistent/interpreter\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin)
+	value := &OpenCode{}
+	defer value.Close()
+	if sources, err := value.Discover(context.Background()); err == nil {
+		t.Fatalf("Discover() = %d sources, nil; want an error because `opencode db path` cannot start", len(sources))
+	}
+}
+
 func parseOne(t *testing.T, value model.Adapter, source model.Source) model.ParsedSource {
 	t.Helper()
 	parsed, err := value.Parse(context.Background(), source)

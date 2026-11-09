@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -47,6 +48,7 @@ func (a *App) runSessionIndex(ctx context.Context, cfg config.Config, args []str
 	if err != nil {
 		return err
 	}
+	selected, skipped := availableHarnesses(selected)
 	lock, err := indexer.AcquireLock(cfg.Index + ".lock")
 	if err != nil {
 		return err
@@ -78,6 +80,9 @@ func (a *App) runSessionIndex(ctx context.Context, cfg config.Config, args []str
 	progress := func(string) {}
 	if !*quiet {
 		progress = func(message string) { fmt.Fprintln(a.Stderr, message) }
+	}
+	for _, name := range skipped {
+		progress(fmt.Sprintf("Skipping %s: %s command not found", name, name))
 	}
 	result, runErr := (&indexer.Indexer{Store: storage, Adapters: adapters, Embedder: embedder}).Run(ctx, indexer.Options{Reembed: *reembed, LockHeld: true, Progress: progress})
 	result.DeletedSources += removed
@@ -250,6 +255,10 @@ func (a *App) runSessionDoctor(ctx context.Context, cfg config.Config, configPat
 	if err != nil {
 		return err
 	}
+	selected, skipped := availableHarnesses(selected)
+	for _, name := range skipped {
+		fmt.Fprintf(a.Stdout, "[SKIP] %-8s %s command not found\n", name, name)
+	}
 	adapters, closeAdapters, err := makeAdapters(ctx, cfg, selected)
 	if err != nil {
 		return err
@@ -357,6 +366,19 @@ func selectHarnesses(cfg config.Config, requested string) ([]string, error) {
 		return nil, fmt.Errorf("no harnesses are enabled")
 	}
 	return values, nil
+}
+
+// availableHarnesses splits harnesses by whether their CLI is on PATH.
+// Each harness CLI has the same name as the harness.
+func availableHarnesses(selected []string) (available, skipped []string) {
+	for _, name := range selected {
+		if _, err := exec.LookPath(name); err != nil {
+			skipped = append(skipped, name)
+			continue
+		}
+		available = append(available, name)
+	}
+	return available, skipped
 }
 
 func parseHarnessList(value string) ([]string, error) {
