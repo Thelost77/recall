@@ -162,6 +162,35 @@ func TestSearchDefaultsToThreeResults(t *testing.T) {
 	}
 }
 
+func TestResumeHintIsEmptyForUnknownHarness(t *testing.T) {
+	ctx := context.Background()
+	storage, err := store.Open(ctx, filepath.Join(t.TempDir(), "index.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer storage.Close()
+	source := model.Source{Key: "source", Harness: "grok", Path: "/sessions/updates.jsonl", Version: "1"}
+	session := model.Session{
+		Key: "session", Harness: "grok", NativeID: "01a0-session", Name: "TPM",
+		CWD: "/work/kumu", SourceKey: source.Key, SourcePath: source.Path,
+	}
+	entry := model.Entry{Key: "entry", SessionKey: session.Key, NativeID: "message", Role: "user", Kind: "message", Text: "set up tpm"}
+	if err := storage.UpsertSource(ctx, source, model.ParsedSource{Sessions: []model.Session{session}, Entries: []model.Entry{entry}}, chunk.Entries([]model.Entry{entry})); err != nil {
+		t.Fatal(err)
+	}
+
+	response, err := (&Searcher{Store: storage}).Search(ctx, "01a0-session", Filters{Limit: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(response.Results) == 0 {
+		t.Fatal("expected a result")
+	}
+	if response.Results[0].Resume != "" {
+		t.Fatalf("resume = %q, want empty", response.Results[0].Resume)
+	}
+}
+
 func TestFuzzyExactAndPathFilters(t *testing.T) {
 	ctx := context.Background()
 	storage, err := store.Open(ctx, filepath.Join(t.TempDir(), "index.sqlite"))

@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -70,11 +71,16 @@ func (a *App) runSessionIndex(ctx context.Context, cfg config.Config, args []str
 		return err
 	}
 	defer closeAdapters()
+	removed, err := storage.DeleteRemovedHarnesses(ctx, harnessNames)
+	if err != nil {
+		return fmt.Errorf("delete sessions of removed harnesses: %w", err)
+	}
 	progress := func(string) {}
 	if !*quiet {
 		progress = func(message string) { fmt.Fprintln(a.Stderr, message) }
 	}
 	result, runErr := (&indexer.Indexer{Store: storage, Adapters: adapters, Embedder: embedder}).Run(ctx, indexer.Options{Reembed: *reembed, LockHeld: true, Progress: progress})
+	result.DeletedSources += removed
 	if !*quiet {
 		fmt.Fprintf(a.Stdout, "Discovered: %d\nUpdated: %d\nUnchanged: %d\nDeleted: %d\nParser errors: %d\nEmbedded: %d\n",
 			result.Discovered, result.UpdatedSources, result.UnchangedSources,
@@ -334,12 +340,15 @@ func makeAdapters(ctx context.Context, cfg config.Config, selected []string) ([]
 	return values, closeAll, nil
 }
 
+// harnessNames lists the supported harnesses in index order.
+var harnessNames = []string{"pi", "codex", "opencode", "claude"}
+
 func selectHarnesses(cfg config.Config, requested string) ([]string, error) {
 	if requested != "" {
 		return parseHarnessList(requested)
 	}
 	var values []string
-	for _, name := range []string{"pi", "codex", "opencode", "claude"} {
+	for _, name := range harnessNames {
 		if cfg.Harnesses[name] {
 			values = append(values, name)
 		}
@@ -354,12 +363,11 @@ func parseHarnessList(value string) ([]string, error) {
 	if strings.TrimSpace(value) == "" {
 		return nil, nil
 	}
-	allowed := map[string]bool{"pi": true, "codex": true, "opencode": true, "claude": true}
 	seen := map[string]bool{}
 	var result []string
 	for _, item := range strings.Split(value, ",") {
 		name := strings.ToLower(strings.TrimSpace(item))
-		if !allowed[name] {
+		if !slices.Contains(harnessNames, name) {
 			return nil, fmt.Errorf("unsupported harness %q", name)
 		}
 		if !seen[name] {

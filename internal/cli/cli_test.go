@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -247,6 +248,51 @@ func TestSessionRebuildDoesNotModifyCanonicalMemories(t *testing.T) {
 	}
 	if !bytes.Equal(before, after) {
 		t.Fatal("session rebuild modified canonical memory")
+	}
+}
+
+func TestIndexDeletesSessionsOfRemovedHarness(t *testing.T) {
+	cfg := fixtureConfig(t)
+	ctx := context.Background()
+	storage, err := store.Open(ctx, cfg.Index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, harness := range []string{"grok", "claude"} {
+		source := model.Source{Key: harness + "-source", Harness: harness, Path: "/" + harness + "/session.jsonl", Version: "1"}
+		session := model.Session{Key: harness + "-session", Harness: harness, NativeID: harness + "-1", Name: harness, SourceKey: source.Key, SourcePath: source.Path}
+		entry := model.Entry{Key: harness + "-entry", SessionKey: session.Key, NativeID: "entry-1", Role: "user", Kind: "message", Text: harness + " session text"}
+		if err := storage.UpsertSource(ctx, source, model.ParsedSource{Sessions: []model.Session{session}, Entries: []model.Entry{entry}}, chunk.Entries([]model.Entry{entry})); err != nil {
+			t.Fatal(err)
+		}
+	}
+	broken := model.Source{Key: "grok-broken", Harness: "grok", Path: "/grok/broken.jsonl", Version: "1"}
+	if err := storage.RecordSourceError(ctx, broken, errors.New("parse failure")); err != nil {
+		t.Fatal(err)
+	}
+	if err := storage.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	app := &App{Stdin: strings.NewReader(""), Stdout: &bytes.Buffer{}, Stderr: &bytes.Buffer{}, Getwd: os.Getwd, Version: "dev"}
+	if err := app.runSessionIndex(ctx, cfg, []string{"--quiet"}, false); err != nil {
+		t.Fatal(err)
+	}
+
+	storage, err = store.Open(ctx, cfg.Index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer storage.Close()
+	stats, err := storage.Stats(ctx, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.Sources != 1 || stats.Sessions != 1 || stats.ParserErrors != 0 {
+		t.Fatalf("stats = %+v, want only the claude source and session", stats)
+	}
+	if versions, err := storage.SourceVersions(ctx, "claude"); err != nil || len(versions) != 1 {
+		t.Fatalf("claude sources = %v, %v; want 1", versions, err)
 	}
 }
 

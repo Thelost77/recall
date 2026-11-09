@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -332,6 +333,41 @@ func (s *Store) DeleteMissingSources(ctx context.Context, harness string, presen
 		}
 	}
 	return len(missing), nil
+}
+
+// DeleteRemovedHarnesses deletes the sources and parser errors of each
+// harness that is not in supported.
+func (s *Store) DeleteRemovedHarnesses(ctx context.Context, supported []string) (int, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT harness FROM source UNION SELECT harness FROM parser_error`)
+	if err != nil {
+		return 0, err
+	}
+	var removed []string
+	for rows.Next() {
+		var harness string
+		if err := rows.Scan(&harness); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		if !slices.Contains(supported, harness) {
+			removed = append(removed, harness)
+		}
+	}
+	if err := rows.Close(); err != nil {
+		return 0, err
+	}
+	total := 0
+	for _, harness := range removed {
+		deleted, err := s.DeleteMissingSources(ctx, harness, nil)
+		if err != nil {
+			return total, err
+		}
+		if _, err := s.db.ExecContext(ctx, `DELETE FROM parser_error WHERE harness = ?`, harness); err != nil {
+			return total, err
+		}
+		total += deleted
+	}
+	return total, nil
 }
 
 func (s *Store) PendingChunks(ctx context.Context, fingerprint string, limit int) ([]PendingChunk, error) {

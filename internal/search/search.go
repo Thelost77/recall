@@ -527,7 +527,7 @@ func resumeHint(item candidate) string {
 	case "claude":
 		command = "claude --resume " + shellQuote(item.SessionID)
 	}
-	if item.CWD == "" {
+	if command == "" || item.CWD == "" {
 		return command
 	}
 	return "cd " + shellQuote(item.CWD) + " && " + command
