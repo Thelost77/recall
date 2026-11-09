@@ -241,7 +241,11 @@ Configuration precedence is:
 
 The embedding endpoint must use a loopback address. This prevents accidental uploads of private session or memory text. The default semantic threshold is `0.80`.
 
-The embedding model must be an EmbeddingGemma model, because `recall` adds EmbeddingGemma prompt prefixes to queries and documents. When you change the model, the next `recall index` embeds all chunks and memories again.
+The embedding model must be an EmbeddingGemma model, because `recall` adds EmbeddingGemma prompt prefixes to queries and documents.
+`recall` accepts a model only when its name contains `embeddinggemma`.
+With another model, each command that uses the embedding model fails with an error.
+Search with `--lexical-only` does not use the embedding model.
+When you change the model, the next `recall index` embeds all chunks and memories again.
 
 ## Status and diagnostics
 

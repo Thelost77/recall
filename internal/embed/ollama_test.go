@@ -36,11 +36,24 @@ func TestDotRejectsDifferentDimensions(t *testing.T) {
 }
 
 func TestNewRejectsRemoteEmbeddingURL(t *testing.T) {
-	if _, err := New("https://embedding.example.com", "model"); err == nil {
+	if _, err := New("https://embedding.example.com", "embeddinggemma-2:270m"); err == nil {
 		t.Fatal("New accepted a non-loopback URL")
 	}
-	if _, err := New("http://127.0.0.1:11434", "model"); err != nil {
+	if _, err := New("http://127.0.0.1:11434", "embeddinggemma-2:270m"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestNewAcceptsOnlyEmbeddingGemmaModels(t *testing.T) {
+	for _, model := range []string{"embeddinggemma-2:270m", "embeddinggemma:300m", "EmbeddingGemma"} {
+		if _, err := New("http://127.0.0.1:11434", model); err != nil {
+			t.Errorf("New(%q) = %v, want nil", model, err)
+		}
+	}
+	for _, model := range []string{"all-minilm", "nomic-embed-text"} {
+		if _, err := New("http://127.0.0.1:11434", model); err == nil {
+			t.Errorf("New(%q) accepted a model that is not EmbeddingGemma", model)
+		}
 	}
 }
 
@@ -59,7 +72,7 @@ func TestClientAddsEmbeddingGemmaPrompts(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(embedResponse{Embeddings: vectors})
 	}))
 	defer server.Close()
-	client, err := New(server.URL, "model")
+	client, err := New(server.URL, "embeddinggemma-2:270m")
 	if err != nil {
 		t.Fatal(err)
 	}

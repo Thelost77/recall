@@ -61,6 +61,9 @@ func New(rawURL, model string) (*Client, error) {
 	if model == "" {
 		return nil, fmt.Errorf("embedding model is empty")
 	}
+	if !strings.Contains(strings.ToLower(model), "embeddinggemma") {
+		return nil, fmt.Errorf("embedding model %q is not supported: recall adds EmbeddingGemma prompts, so use an EmbeddingGemma model", model)
+	}
 	return &Client{
 		baseURL: parsed, model: model,
 		http: &http.Client{Timeout: 5 * time.Minute},

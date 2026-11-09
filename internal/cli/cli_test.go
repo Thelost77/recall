@@ -12,6 +12,7 @@ import (
 
 	"github.com/Thelost77/recall/internal/chunk"
 	"github.com/Thelost77/recall/internal/config"
+	"github.com/Thelost77/recall/internal/embed"
 	"github.com/Thelost77/recall/internal/memory"
 	"github.com/Thelost77/recall/internal/model"
 	"github.com/Thelost77/recall/internal/store"
@@ -23,7 +24,7 @@ func fixtureConfig(t *testing.T) config.Config {
 	return config.Config{
 		Index: filepath.Join(root, "sessions.sqlite"), MemoryDirectory: filepath.Join(root, "memories"),
 		MemoryIndex: filepath.Join(root, "memory.sqlite"),
-		Embedding:   config.EmbeddingConfig{URL: "http://127.0.0.1:1", Model: "fixture", Threshold: 0.60},
+		Embedding:   config.EmbeddingConfig{URL: "http://127.0.0.1:1", Model: "embeddinggemma-fixture", Threshold: 0.60},
 		Harnesses:   map[string]bool{"pi": true},
 	}
 }
@@ -175,7 +176,11 @@ func TestRememberSucceedsWhenEmbeddingFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer index.Close()
-	pending, err := index.Pending(context.Background(), "ollama:fixture:chunks-v1", 10)
+	provider, err := embed.New(cfg.Embedding.URL, cfg.Embedding.Model)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pending, err := index.Pending(context.Background(), provider.Fingerprint(), 10)
 	if err != nil || len(pending) != 1 {
 		t.Fatalf("pending = %#v, %v", pending, err)
 	}
